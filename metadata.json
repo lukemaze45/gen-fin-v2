@@ -1,0 +1,6 @@
+{
+  "name": "Genesis Financial",
+  "description": "Recruitment website for aspiring financial and life insurance agents with Genesis Financial. Explore the opportunity, understand the benefits, and book a conversation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
