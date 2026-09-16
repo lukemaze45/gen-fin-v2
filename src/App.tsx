@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { motion, useScroll, useSpring } from "motion/react";
 import { Navbar } from "./components/Navbar";
 import { Hero } from "./components/Hero";
+import { StatsSection } from "./components/StatsSection";
 import { OpportunitySection } from "./components/OpportunitySection";
 import { Benefits } from "./components/Benefits";
 import { Journey } from "./components/Journey";
@@ -17,6 +19,14 @@ export default function App() {
   const [isBookingOpen, setIsBookingOpen] = useState<boolean>(false);
   const [legalDoc, setLegalDoc] = useState<LegalDocType | null>(null);
 
+  // Smooth scroll progress bar at the top of the screen
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001,
+  });
+
   const handleBookCall = () => {
     // If client has provided their Calendly link, directly navigate or open in modal
     if (siteConfig.calendlyUrl && siteConfig.calendlyUrl.trim().length > 0) {
@@ -27,14 +37,20 @@ export default function App() {
   };
 
   const handleLearnMore = () => {
-    const el = document.getElementById("opportunity");
+    const el = document.getElementById("stats-preview") || document.getElementById("opportunity");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#E8E8E8] flex flex-col selection:bg-[#B00000] selection:text-white">
+    <div className="min-h-screen bg-[#050505] text-[#E8E8E8] flex flex-col selection:bg-[#B00000] selection:text-white relative">
+      {/* Laser-sleek Crimson Scroll Progress Indicator */}
+      <motion.div
+        style={{ scaleX }}
+        className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#B00000] via-[#FF4D4D] to-[#B00000] z-50 origin-left shadow-[0_0_12px_rgba(255,77,77,0.7)] pointer-events-none"
+      />
+
       {/* Sticky Header Navigation */}
       <Navbar onBookCall={handleBookCall} />
 
@@ -43,25 +59,30 @@ export default function App() {
         {/* 1. Hero Section */}
         <Hero onBookCall={handleBookCall} onLearnMore={handleLearnMore} />
 
-        {/* 2. Opportunity Introduction ("More Than A Job") */}
+        {/* 2. Flashy Stats & %s Showcase (Gen Z appeal, high-impact metrics) */}
+        <div id="stats-preview">
+          <StatsSection onBookCall={handleBookCall} />
+        </div>
+
+        {/* 3. Opportunity Introduction ("More Than A Job") */}
         <OpportunitySection onBookCall={handleBookCall} onLearnMore={handleLearnMore} />
 
-        {/* 3. Why Genesis / 6 Benefit Cards */}
+        {/* 4. Why Genesis / 6 Benefit Cards */}
         <Benefits onBookCall={handleBookCall} />
 
-        {/* 4. The Genesis Journey / 4-Step Process */}
+        {/* 5. The Genesis Journey / 4-Step Process */}
         <Journey onBookCall={handleBookCall} />
 
-        {/* 5. Who Is This For? / Candidate Profile */}
+        {/* 6. Who Is This For? / Candidate Profile */}
         <WhoIsThisFor onBookCall={handleBookCall} />
 
-        {/* 6. Testimonials ("Hear From Our Agents") */}
+        {/* 7. Testimonials ("Hear From Our Agents") */}
         <Testimonials />
 
-        {/* 7. About Genesis / Leadership Profile */}
+        {/* 8. About Genesis / Leadership Profile */}
         <About />
 
-        {/* 8. Book a Call / Primary Conversion Section */}
+        {/* 9. Book a Call / Primary Conversion Section */}
         <BookCall onBookCall={handleBookCall} />
       </main>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { motion } from "motion/react";
 
 export const HeroGlobeVisual: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -21,15 +22,34 @@ export const HeroGlobeVisual: React.FC = () => {
     let dragVelocity = 0;
     const baseSpeed = 0.007; // Smooth continuous rotation speed
 
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+    const updateSize = () => {
+      if (!canvas) return;
+      const container = containerRef.current;
+      // Use untransformed client geometry so CSS transforms (scale) do not shrink the bitmap buffer
+      const width = container ? container.clientWidth : canvas.clientWidth;
+      const height = container ? container.clientHeight : canvas.clientHeight;
+
+      if (width > 0 && height > 0) {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const targetW = Math.round(width * dpr);
+        const targetH = Math.round(height * dpr);
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
+      }
     };
 
-    resize();
-    window.addEventListener("resize", resize);
+    updateSize();
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        updateSize();
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+    window.addEventListener("resize", updateSize);
 
     // Mouse & Touch interaction handlers for tactile control
     const onMouseDown = (e: MouseEvent) => {
@@ -130,16 +150,22 @@ export const HeroGlobeVisual: React.FC = () => {
         rotation += baseSpeed + dragVelocity;
       }
 
-      const rect = canvas.getBoundingClientRect();
+      // Read dimensions directly from the synchronized canvas buffer
+      const width = canvas.width;
+      const height = canvas.height;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = rect.width * dpr;
-      const height = rect.height * dpr;
+
+      if (width === 0 || height === 0) {
+        animationFrameId = requestAnimationFrame(render);
+        return;
+      }
 
       ctx.clearRect(0, 0, width, height);
 
       const cx = width / 2;
       const cy = height / 2;
-      const sphereRadius = Math.min(width, height) * 0.38;
+      // 0.36 provides a generous 14% margin around the sphere so rims, flares, and glows are never clipped
+      const sphereRadius = Math.min(width, height) * 0.36;
 
       // 1. BASE METALLIC CHROME SPHERE GRADIENT
       ctx.save();
@@ -319,7 +345,8 @@ export const HeroGlobeVisual: React.FC = () => {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("resize", resize);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateSize);
       canvas.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
@@ -331,7 +358,8 @@ export const HeroGlobeVisual: React.FC = () => {
 
   return (
     <div
-      className="relative w-full max-w-[280px] sm:max-w-md lg:max-w-lg mx-auto aspect-square flex items-center justify-center select-none"
+      ref={containerRef}
+      className="relative w-full max-w-[280px] sm:max-w-md lg:max-w-lg mx-auto aspect-square flex items-center justify-center select-none overflow-visible"
       id="hero-globe-container"
     >
       {/* Background ambient red glow & subtle volumetric lighting */}
@@ -349,19 +377,14 @@ export const HeroGlobeVisual: React.FC = () => {
         className="absolute inset-[7%] rounded-full border border-transparent border-t-[#B00000]/60 pointer-events-none"
       />
 
-      {/* Main Spinning 3D Metallic Globe Canvas */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
-      >
+      {/* Main Spinning 3D Metallic Globe Canvas (Locked to absolute inset-0 so aspect-square never truncates) */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center cursor-grab active:cursor-grabbing">
         <canvas
           ref={canvasRef}
-          className="w-full h-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.95)]"
+          className="block w-full h-full drop-shadow-[0_15px_45px_rgba(0,0,0,0.95)]"
           title="Genesis Financial 3D Global Network - Drag to rotate"
         />
-      </motion.div>
+      </div>
     </div>
   );
 };
